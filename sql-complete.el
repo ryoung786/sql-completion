@@ -126,8 +126,10 @@ Each element of the list has the form
   (message "SQL table -> column completion done initializing"))
 
 (defun sql-column-completions ()
-  (let* ((word-array (split-string (get-input) "[\\. \n]"))
-	 (prefix (upcase (car (last word-array))))
+  (let* ((word-array (split-string (pick-out-word-before-period) "\\."))
+	 (prefix (upcase (chomp (car (last word-array)))))
+	 ;(word-array (split-string (get-input) "[\\. \n]"))
+	 ;(prefix (upcase (car (last word-array))))
 	 (table_name (upcase (chomp (get-2nd-to-last word-array))))
 	 (completions (cdr (assoc table_name sql-table2col-alist))))
     (if (not completions)
