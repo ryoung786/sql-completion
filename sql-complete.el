@@ -27,7 +27,16 @@
 ;;; Commentary:
 
 ;; Trying to provide a framework for completion that will eventually
-;; make it into sql.el.  
+;; make it into sql.el.
+
+;; It takes a while to build the completions up.  The idea is to send
+;; the select macro to the interpreter, then parse the output after
+;; it writes to the buffer.  However, I've noticed that I have to
+;; wait for the output to be completely written to the buffer before
+;; I can move on to parse, otherwise we won't get the full list of
+;; values.  With that in mind, adjust the wait times to suit your
+;; needs, based on how large your db schema is.
+
 
  
 
@@ -36,7 +45,7 @@
 (require 'sql)
 
 (defcustom sql-db2-table2column-macro
-  "select '(\"' || c.TABNAME || '\" \"' || c.COLNAME || '\")' from syscat.tables t, syscat.columns c where t.TABNAME = c.TABNAME and t.TYPE='T' and t.OWNERTYPE='U' and t.TABSCHEMA like 'CRD%' order by c.TABNAME"
+  "select '(\"' || c.TABNAME || '\" \"' || c.COLNAME || '\")' from syscat.tables t, syscat.columns c where t.TABNAME = c.TABNAME and t.TYPE='T' and t.OWNERTYPE='U' order by c.TABNAME"
   "SQL Statement to determine all tables and columns."
   :group 'SQL
   :type 'string)
@@ -142,8 +151,6 @@ Each element of the list has the form
     completions))
 ;    (comint-dynamic-simple-complete prefix completions)))
 
-;crdb.limit_package.act
-
 (defun get-2nd-to-last (somelist)
   (while (> (list-length somelist) 2) (setq somelist (cdr somelist)))
   (car somelist))
@@ -175,5 +182,29 @@ schema, table, and column names.  Must call sql-build-completions once before th
   (save-excursion
     (comint-goto-process-mark)
     (message (buffer-substring (point) (point-max)))))
+
+(defun chomp (str)
+  "Chomp leading and tailing whitespace from STR.
+
+Why doesn't Emacs have this built in? --Ripped from dhax (of ezbl fame)"
+  (let ((s (if (symbolp str) (symbol-name str) str)))
+    (save-excursion
+      ;; Make the [:space:] class match newline.
+      (with-syntax-table (copy-syntax-table)
+        (modify-syntax-entry ?\n " ")
+        (string-match "^[[:space:]]*\\(.*?\\)[[:space:]]*$" s)
+        (match-string 1 s)))))
+
+(defun pick-out-word-before-period ()
+  (interactive)
+  ; grab the text 
+  (let* ((line (thing-at-point 'line))
+	 (p1 nil)      ; p1 is the left-most point
+	 (p2 (point))) ; p2 is the right-most point
+    (re-search-backward " ")
+    (setq p1 (point))    
+    (message (buffer-substring p1 p2))
+    (goto-char p2)
+    (buffer-substring p1 p2)))
 
 ;;; sql-complete.el ends here
